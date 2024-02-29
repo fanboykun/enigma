@@ -2,6 +2,10 @@
 	import Keyboard from "$lib/components/Keyboard.svelte";
 	import { EnigmaMachine } from "$lib/functions/enigma";
 	import { Socket } from "$lib/functions/socket";
+    import RotorSetting from "$lib/components/RotorSetting.svelte";
+    import type { EnigmaConfiguration, Rotor } from "$lib/types";
+
+    let openRotorSetting = false
 
     export const keyLines: string[] = [
         'Q', 'W', 'E', 'R', 'T', 'Y', 'U', 'I', 'O', 'P',
@@ -13,106 +17,39 @@
     // socket.listen()
     const socket = null
 
-    function startEnigma() {
+    function startEnigma(plaintext = "HELLO") {
         // Example usage
-        const enigma = new EnigmaMachine();
-        enigma.setPlugboard([["A", "E"], ["B", "T"], ["C", "Z"]]); // Example plugboard settings
-        enigma.setRotorPositions([0, 0, 0]); // Example rotor positions
-        enigma.setRotorMappings(["EKMFLGDQVZNTOWYHXUSPAIBRCJ", "AJDKSIRUXBLHWTMCQGZNPYFVOE", "BDFHJLCPRTXVZNYEIWGAKMUSQO"]); // Example rotor mappings
+        const intialEnigmaConfig: EnigmaConfiguration = {
+            rotorPosition: [0, 0, 0],
+            rotorMappings: ["EKMFLGDQVZNTOWYHXUSPAIBRCJ", "AJDKSIRUXBLHWTMCQGZNPYFVOE", "BDFHJLCPRTXVZNYEIWGAKMUSQO"],
+            plugboardMappings: [["A", "E"], ["B", "T"], ["C", "Z"], ["D", "F"], ["V", "M"]]
+        }
+        const enigma = new EnigmaMachine(intialEnigmaConfig);
 
-        const plaintext = "HELLO";
         let ciphertext = "";
 
         for (const letter of plaintext) {
             ciphertext += enigma.encrypt(letter);
         }
-
+        return [plaintext,ciphertext]
     }
-
-    function roman() {
-        type Rotor = { position:number, isRotating: boolean, mappings: string[], current: string }
-        const plain = 'A'
-        const rotors : Rotor[] = [
-            {
-                position: 1,
-                isRotating: true,
-                mappings: ["EKMFLGDQVZNTOWYHXUSPAIBRCJ"],
-                current: 'A'
-            },
-            {
-                position: 1,
-                isRotating: false,
-                mappings: ["AJDKSIRUXBLHWTMCQGZNPYFVOE"],
-                current: 'A'
-            },
-            {
-                position: 1,
-                isRotating: false,
-                mappings: ["BDFHJLCPRTXVZNYEIWGAKMUSQO"],
-                current: 'A'
-            },
-        ]
-
-        let scrambled = ''
-        let idx:number|undefined
-        let hasFoundId = false
-
-        const plugboardProcess = () => {
-            const plug = {'A': 'L'}
-            const aftrPlg = plug[plain] ?? plug
-            return aftrPlg
-        }
-
-        const rotorProcess = (aftrPlg: string, isRotated: boolean = false) => {
-            const beginRotorProcess = ( rotor: Rotor, i: number ) => {
-                if(!hasFoundId) {
-                    idx = rotor.mappings.toString().indexOf(aftrPlg.toUpperCase())
-                    if(typeof idx == 'undefined') return
-                    hasFoundId = true
-                    scrambled = rotor.mappings.toString()[idx]
-                }
-                if(rotor.isRotating){
-                    const strMap = rotor.mappings.toString()
-                    const cuttedSrtring = strMap.slice(strMap.length - 1)
-                    rotor.mappings = [cuttedSrtring.concat(strMap.slice(0, strMap.length - 1))]
-                    rotor.position++
-                    if(rotor.position >= 26) {
-                        rotor.isRotating = false
-                        rotor.position = 1
-                        i+1 === rotors.length ? rotors[0].isRotating = true : rotors[i+1].isRotating = true
-                    }
-                }
-            }
-
-            if(isRotated) {
-                for(let i = rotors.length; i >= 0; i--) {
-                   beginRotorProcess(rotors[i], i) 
-                }
-            }else {
-                for(let i = 0; i < rotors.length; i++) {
-                   beginRotorProcess(rotors[i], i) 
-                }
-            }
-
-        }
-        
-        const reflectProcess = () => {
-            hasFoundId = false
-            rotorProcess(scrambled)
-        }
-
-        const afterPlugProcess = plugboardProcess()
-        rotorProcess(afterPlugProcess)
-        reflectProcess()
-        console.log(scrambled)
-
-    }
-    roman()
-    // startEnigma()
+    const res = startEnigma("HELLO")
+    console.log(res)
 
 </script>
 
-<div class="flex h-screen w-screen bg-[#202127] flex-col justify-center items-center gap-4">
+<div class="flex relative h-screen w-screen bg-[#202127] flex-col justify-center items-center gap-4">
+    <div class="absolute top-0 w-full h-12 flex py-4 px-8">
+        <button type="button" class="flex items-center py-4 gap-2 group" on:click={() => openRotorSetting = true}>
+            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="w-12 h-12 text-white animate-spin">
+                <path stroke-linecap="round" stroke-linejoin="round" d="M4.5 12a7.5 7.5 0 0 0 15 0m-15 0a7.5 7.5 0 1 1 15 0m-15 0H3m16.5 0H21m-1.5 0H12m-8.457 3.077 1.41-.513m14.095-5.13 1.41-.513M5.106 17.785l1.15-.964m11.49-9.642 1.149-.964M7.501 19.795l.75-1.3m7.5-12.99.75-1.3m-6.063 16.658.26-1.477m2.605-14.772.26-1.477m0 17.726-.26-1.477M10.698 4.614l-.26-1.477M16.5 19.794l-.75-1.299M7.5 4.205 12 12m6.894 5.785-1.149-.964M6.256 7.178l-1.15-.964m15.352 8.864-1.41-.513M4.954 9.435l-1.41-.514M12.002 12l-3.75 6.495" />
+            </svg>          
+            <span class="text-white text-2xl hidden group-hover:flex">Open Rotor Setting</span>
+        </button>
+    </div>
+    {#if openRotorSetting}
+        <RotorSetting onCLose={() => openRotorSetting = false} />
+    {/if}
     <Keyboard {keyLines} keyLineType={"DECRYPTOR"} {socket} />
     <Keyboard {keyLines} keyLineType={"ENCRYPTOR"} {socket} />
 </div>
